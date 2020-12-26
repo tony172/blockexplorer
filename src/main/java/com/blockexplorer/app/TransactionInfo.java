@@ -12,6 +12,16 @@ public class TransactionInfo {
     private String time;
     private Long vSize;
     private Integer version;
+
+    public Double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
+
+    private Double amount;
     List<InputInfo> inputs;
     List<OutputInfo> outputs;
 

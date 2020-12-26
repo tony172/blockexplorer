@@ -4,7 +4,16 @@ public class BlockInfo {
     Integer height;
     Integer size;
     Integer confirmations;
+    Double amount;
     String time;
+
+    public Double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
 
     public Integer getHeight() {
         return height;

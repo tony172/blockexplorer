@@ -31,10 +31,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
     });
     draw30DaysPriceHistory();
     $.post("/latest10Blocks",
-    function(data, status){
+    function(data, status) {
       print10LatestBlocks(data);
+      $.post("/latest10Transactions",
+      function(data, status) {
       print10LatestTransactions(data);
-      });
+    });
+    });
 });
 
 function processInput() {
@@ -602,7 +605,7 @@ function print10LatestBlocks(data) {
     row.appendChild(col);
     var col = document.createElement("div");
     col.classList.add("col");
-    col.innerText = data[i].size;
+    col.innerText = data[i].size + " bytes";
     row.appendChild(col);
     leftCol.appendChild(row);
   }
@@ -627,11 +630,66 @@ function print10LatestTransactions(data) {
   row.appendChild(col);
   var col = document.createElement("div");
   col.classList.add("col");
-  col.innerText = "Time";
+  col.innerText = "Amount (BTC)";
   row.appendChild(col);
   var col = document.createElement("div");
   col.classList.add("col");
-  col.innerText = "Amount";
+  col.innerText = "Amount (USD)";
   row.appendChild(col);
   rightCol.appendChild(row);
+
+  for (var i = 0; i < data.length; i++) {
+    var row = document.createElement("div");
+    row.classList.add("row");
+    var col = document.createElement("div");
+    col.classList.add("col", "text-truncate");
+    col.innerHTML = '<a href="#" onclick=showTransaction(innerText)>' + data[i].txId + '</a>';
+    row.appendChild(col);
+    var col = document.createElement("div");
+    col.classList.add("col");
+    col.innerText = (data[i].amount).toFixed(8) + " BTC";
+    row.appendChild(col);
+    var col = document.createElement("div");
+    col.classList.add("col");
+    col.innerText = "$ " + (data[i].amount * BTCtoUSD).toFixed(2);
+    row.appendChild(col);
+    rightCol.appendChild(row);
+  }
+}
+
+function showTransaction(txId) {
+  $.post("/process",
+    {value: txId},
+    function(data, status){
+      clearScreen();
+      if (data.status == "tx") {
+        printTxInfo(data);
+        printTxInputs(data);
+        printTxOutputs(data);
+      }
+    });
+}
+
+function showMain() {
+  clearScreen();
+  $.get( "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true",
+  function( data ) {
+    BTCtoUSD = data["bitcoin"]["usd"];
+    usdMarketCap = data["bitcoin"]["usd_market_cap"];
+    usd24Vol = data["bitcoin"]["usd_24h_vol"];
+    usd24Change = data["bitcoin"]["usd_24h_change"];
+    document.getElementById("currentPrice").innerHTML += " " + BTCtoUSD + " $";
+    document.getElementById("marketCap").innerHTML += " " + parseFloat(usdMarketCap).toFixed(2) + " $";
+    document.getElementById("vol").innerHTML += " " + parseFloat(usd24Vol).toFixed(2) + " $";
+    document.getElementById("change").innerHTML += " " + parseFloat(usd24Change).toFixed(2) + " %";
+  });
+  draw30DaysPriceHistory();
+  $.post("/latest10Blocks",
+  function(data, status) {
+    print10LatestBlocks(data);
+    $.post("/latest10Transactions",
+    function(data, status) {
+    print10LatestTransactions(data);
+  });
+  });
 }

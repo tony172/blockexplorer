@@ -69,7 +69,8 @@ public class BlockExplorerRestController {
                     inputInfo.setValue(input.getTransactionOutput().value().doubleValue());
                     inputInfo.setScriptPubKey(input.scriptPubKey());
                     inputInfo.setScriptPubKey(input.getTransactionOutput().scriptPubKey().hex());
-                    inputInfo.setAddresses(input.getTransactionOutput().scriptPubKey().addresses());
+                    inputInfo.setAddresses(input.getTransactionOutput().scriptPubKey().addresses() == null ?
+                            new ArrayList<>() : input.getTransactionOutput().scriptPubKey().addresses());
                     inputs.add(inputInfo);
                 });
 
@@ -79,7 +80,8 @@ public class BlockExplorerRestController {
                     outputInfo.setValue(output.value().doubleValue());
                     outputInfo.setScriptPubKey(output.scriptPubKey().toString());
                     outputInfo.setScriptPubKey(output.scriptPubKey().hex());
-                    outputInfo.setAddresses(output.scriptPubKey().addresses());
+                    outputInfo.setAddresses(output.scriptPubKey().addresses() == null ?
+                            new ArrayList<>() : output.scriptPubKey().addresses());
                     outputInfo.setSpent(output.toInput().vout() != 0);
                     outputs.add(outputInfo);
                 });
@@ -87,11 +89,20 @@ public class BlockExplorerRestController {
                 txInfo.setInputs(inputs);
                 txInfo.setOutputs(outputs);
                 txInfo.setBlockHash(transaction.get().blockHash());
-                txInfo.setBlockHeight(bitcoinClient.getBlock(transaction.get().blockHash()).height());
-                txInfo.setConfirmations(transaction.get().confirmations());
+                try {
+                    txInfo.setBlockHeight(bitcoinClient.getBlock(transaction.get().blockHash()).height());
+                } catch (Exception e) {
+                    txInfo.setBlockHeight(0);
+                }
+
+                txInfo.setConfirmations(transaction.get().confirmations() == null ? 0 : transaction.get().confirmations());
                 txInfo.setSize(transaction.get().size());
                 txInfo.setLockTime(transaction.get().lockTime());
-                txInfo.setTime(transaction.get().time().toString());
+                try {
+                    txInfo.setTime(transaction.get().time().toString());
+                } catch (Exception e) {
+                    txInfo.setTime("unavailable");
+                }
                 txInfo.setTxId(transaction.get().txId());
                 txInfo.setVersion(transaction.get().version());
                 txInfo.setvSize(transaction.get().vsize());
@@ -136,10 +147,21 @@ public class BlockExplorerRestController {
         return bitcoinClient;
     }
 
-    @PostMapping(path = "/latestTx")
-    public List<String> getLastTransactions() {
-        return connect().listTransactions()
-                .stream().map(tx -> tx.txId()).collect(Collectors.toList());
+    @PostMapping(path = "/latest10Transactions")
+    public List<TransactionInfo> getLast10Transactions() {
+        List<TransactionInfo> transactionInfos = new ArrayList<>();
+        connect().getRawMemPool().stream().limit(10).forEach(txId -> {
+            BitcoindRpcClient.RawTransaction transaction = bitcoinClient.getRawTransaction(txId);
+            TransactionInfo txInfo = new TransactionInfo();
+            txInfo.setTxId(transaction.txId());
+            Double amount = 0.0;
+            for (BitcoindRpcClient.RawTransaction.Out output : transaction.vOut()) {
+                amount += output.value().doubleValue();
+            }
+            txInfo.setAmount(amount);
+            transactionInfos.add(txInfo);
+        });
+        return transactionInfos;
     }
 
     @PostMapping(path = "/latest10Blocks")
