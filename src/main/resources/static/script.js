@@ -8,5 +8,10 @@ input.addEventListener("keyup", function(event) {
 });
 
 function processInput() {
-    alert(document.getElementById("mainInput").value);
+    var value = document.getElementById("mainInput").value;
+    $.post("/process",
+    {value: value},
+    function(data, status){
+        alert("Data: " + data + "\nStatus: " + status);
+      });
 }
