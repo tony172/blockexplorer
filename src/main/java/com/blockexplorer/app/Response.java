@@ -1,8 +1,17 @@
 package com.blockexplorer.app;
 
 public class Response {
-    private String status;
+    String status;
     TransactionInfo txInfo;
+    BlockInfo blockInfo;
+
+    public BlockInfo getBlockInfo() {
+        return blockInfo;
+    }
+
+    public void setBlockInfo(BlockInfo blockInfo) {
+        this.blockInfo = blockInfo;
+    }
 
     public String getStatus() {
         return status;

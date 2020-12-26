@@ -27,11 +27,13 @@
             <div class="col">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg"
                     alt="Bitcoin" width="30" height="30">
-                <a>Bitcoin Explorer</a>
+                <a id="networkType">Bitcoin Explorer</a>
+                <div id="loading" class="spinner-border spinner-border-lg" role="status">
+                </div>
             </div>
             <div class="col">
                 <div class="input-group mb-3">
-                    <input type="text" id="mainInput" class="form-control" placeholder="Search your transaction, an address or a block">
+                    <input type="text" id="mainInput" class="form-control" placeholder="Search your transaction or a block">
                     <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="button" onclick="processInput()">OK</button>
                     </div>

@@ -1,11 +1,76 @@
 package com.blockexplorer.app;
 
+import java.util.List;
+
 public class BlockInfo {
     Integer height;
     Integer size;
     Integer confirmations;
+    Long nonce;
     Double amount;
+    Double fee;
+    Double difficulty;
     String time;
+    String fullTime;
+    String merkleRoot;
+    String hash;
+    List<String> txIds;
+
+    public String getHash() {
+        return hash;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
+
+    public Long getNonce() {
+        return nonce;
+    }
+
+    public void setNonce(Long nonce) {
+        this.nonce = nonce;
+    }
+
+    public Double getFee() {
+        return fee;
+    }
+
+    public void setFee(Double fee) {
+        this.fee = fee;
+    }
+
+    public Double getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(Double difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public String getFullTime() {
+        return fullTime;
+    }
+
+    public void setFullTime(String fullTime) {
+        this.fullTime = fullTime;
+    }
+
+    public String getMerkleRoot() {
+        return merkleRoot;
+    }
+
+    public void setMerkleRoot(String merkleRoot) {
+        this.merkleRoot = merkleRoot;
+    }
+
+    public List<String> getTxIds() {
+        return txIds;
+    }
+
+    public void setTxIds(List<String> txIds) {
+        this.txIds = txIds;
+    }
 
     public Double getAmount() {
         return amount;

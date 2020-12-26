@@ -38,21 +38,19 @@ public class BlockExplorerRestController {
         empty();
         connect();
         Response response = new Response();
+        response.setStatus(NONE);
 
         if (value.length() == 64) {
             txOrBlockHash = Optional.of(value);
             if (bitcoinClient == null) {
-                status = Optional.of(NONE);
-                return null;
+                return response;
             }
 
             try {
-                block = Optional.of(bitcoinClient.getBlock(value));
+                blockHeight = Optional.of(bitcoinClient.getBlock(value).height());
                 status = Optional.of(BLOCK);
-                return null;
             } catch (Exception e) {
                 status = Optional.of(NONE);
-                e.printStackTrace();
             }
 
             try {
@@ -64,13 +62,16 @@ public class BlockExplorerRestController {
                 List<OutputInfo> outputs = new ArrayList<>();
 
                 transaction.get().vIn().forEach(input -> {
+                    BitcoindRpcClient.RawTransaction.Out txOut;
+                    try {
+                        txOut = input.getTransactionOutput();
+                    } catch (Exception e) {return;}
                     InputInfo inputInfo = new InputInfo();
                     inputInfo.setSequence(input.sequence());
-                    inputInfo.setValue(input.getTransactionOutput().value().doubleValue());
-                    inputInfo.setScriptPubKey(input.scriptPubKey());
-                    inputInfo.setScriptPubKey(input.getTransactionOutput().scriptPubKey().hex());
-                    inputInfo.setAddresses(input.getTransactionOutput().scriptPubKey().addresses() == null ?
-                            new ArrayList<>() : input.getTransactionOutput().scriptPubKey().addresses());
+                    inputInfo.setValue(txOut.value().doubleValue());
+                    inputInfo.setScriptPubKey(txOut.scriptPubKey().hex());
+                    inputInfo.setAddresses(txOut.scriptPubKey().addresses() == null ?
+                            new ArrayList<>() : txOut.scriptPubKey().addresses());
                     inputs.add(inputInfo);
                 });
 
@@ -86,6 +87,16 @@ public class BlockExplorerRestController {
                     outputs.add(outputInfo);
                 });
 
+                if (inputs.size() == 0) {
+                    InputInfo tmp = new InputInfo();
+                    tmp.setAddresses(new ArrayList<>());
+                    inputs.add(tmp);
+                }
+                if (outputs.size() == 0) {
+                    OutputInfo tmp = new OutputInfo();
+                    tmp.setAddresses(new ArrayList<>());
+                    outputs.add(tmp);
+                }
                 txInfo.setInputs(inputs);
                 txInfo.setOutputs(outputs);
                 txInfo.setBlockHash(transaction.get().blockHash());
@@ -116,16 +127,55 @@ public class BlockExplorerRestController {
             }
         }
 
-        try {
-            blockHeight = Optional.of(Integer.parseInt(value));
-            status = Optional.of(BLOCK);
-            return null;
-        } catch (Exception e) {
-            e.printStackTrace();
+        Integer height = 0;
+        if (blockHeight.isPresent()) {
+            height = blockHeight.get();
+        } else {
+            try {
+                height = Integer.parseInt(value);
+            } catch (Exception e) {
+                return response;
+            }
         }
+        try {
+            BitcoindRpcClient.Block block = bitcoinClient.getBlock(height);
+            BlockInfo blockInfo = new BlockInfo();
+            blockInfo.setDifficulty(block.difficulty().doubleValue());
+            blockInfo.setNonce(block.nonce());
+            blockInfo.setFullTime(block.time().toString());
+            blockInfo.setMerkleRoot(block.merkleRoot());
+            blockInfo.setTxIds(block.tx());
+            blockInfo.setSize(block.size());
+            blockInfo.setHeight(height);
+            blockInfo.setConfirmations(block.confirmations());
+            blockInfo.setHash(block.hash());
+
+            Double totalInputs = 0.0;
+            Double totalOutputs = 0.0;
+            Double totalFee = 0.0;
+            for (String txId : block.tx()) {
+                BitcoindRpcClient.RawTransaction tx = bitcoinClient.getRawTransaction(txId);
+                for (BitcoindRpcClient.RawTransaction.In in : tx.vIn()) {
+                    try {
+                        totalOutputs += in.getTransactionOutput().value().doubleValue();
+                    } catch (Exception e) {}
+                }
+                for (BitcoindRpcClient.RawTransaction.Out out : tx.vOut()) {
+                    totalInputs += out.value().doubleValue();
+                }
+            }
+            totalFee = totalInputs - totalOutputs;
+            blockInfo.setFee(totalFee);
+            blockInfo.setAmount(totalOutputs);
+
+            response.setStatus(BLOCK);
+            response.setBlockInfo(blockInfo);
+            return response;
+        } catch (Exception e) {}
 
         status = Optional.of(NONE);
-        return null;
+        response.setStatus(NONE);
+        return response;
     }
 
     private BitcoinJSONRPCClient connect() {
