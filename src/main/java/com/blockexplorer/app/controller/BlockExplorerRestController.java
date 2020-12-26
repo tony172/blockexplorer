@@ -13,6 +13,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 public class BlockExplorerRestController {
@@ -66,6 +68,7 @@ public class BlockExplorerRestController {
                     inputInfo.setSequence(input.sequence());
                     inputInfo.setValue(input.getTransactionOutput().value().doubleValue());
                     inputInfo.setScriptPubKey(input.scriptPubKey());
+                    inputInfo.setScriptPubKey(input.getTransactionOutput().scriptPubKey().hex());
                     inputInfo.setAddresses(input.getTransactionOutput().scriptPubKey().addresses());
                     inputs.add(inputInfo);
                 });
@@ -75,6 +78,7 @@ public class BlockExplorerRestController {
                     outputInfo.setN(output.n());
                     outputInfo.setValue(output.value().doubleValue());
                     outputInfo.setScriptPubKey(output.scriptPubKey().toString());
+                    outputInfo.setScriptPubKey(output.scriptPubKey().hex());
                     outputInfo.setAddresses(output.scriptPubKey().addresses());
                     outputInfo.setSpent(output.toInput().vout() != 0);
                     outputs.add(outputInfo);
@@ -83,6 +87,7 @@ public class BlockExplorerRestController {
                 txInfo.setInputs(inputs);
                 txInfo.setOutputs(outputs);
                 txInfo.setBlockHash(transaction.get().blockHash());
+                txInfo.setBlockHeight(bitcoinClient.getBlock(transaction.get().blockHash()).height());
                 txInfo.setConfirmations(transaction.get().confirmations());
                 txInfo.setSize(transaction.get().size());
                 txInfo.setLockTime(transaction.get().lockTime());
@@ -93,14 +98,6 @@ public class BlockExplorerRestController {
 
                 response.setStatus(TX);
                 response.setTxInfo(txInfo);
-
-
-                System.out.println("#######\n");
-                transaction.get().vIn().forEach(in -> System.out.println(in.getTransactionOutput().scriptPubKey() +"\n"));
-
-                System.out.println("####### out\n");
-                transaction.get().vOut().forEach(in -> System.out.println(in.toInput().vout() +"\n"));
-
                 return response;
             } catch (Exception e) {
                 status = Optional.of(NONE);
@@ -120,7 +117,7 @@ public class BlockExplorerRestController {
         return null;
     }
 
-    private void connect() {
+    private BitcoinJSONRPCClient connect() {
         if (bitcoinClient == null) {
             String user = config.getUser();
             String password = config.getPassword();
@@ -131,10 +128,38 @@ public class BlockExplorerRestController {
                 URL url = new URL("http://" + user + ':' + password + "@" + host + ":" + port + "/");
                 bitcoinClient = new BitcoinJSONRPCClient(url);
                 System.out.println("Connected to Bitcoin Core");
+                return bitcoinClient;
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
         }
+        return bitcoinClient;
+    }
+
+    @PostMapping(path = "/latestTx")
+    public List<String> getLastTransactions() {
+        return connect().listTransactions()
+                .stream().map(tx -> tx.txId()).collect(Collectors.toList());
+    }
+
+    @PostMapping(path = "/latest10Blocks")
+    public List<BlockInfo> getLast10Blocks() {
+        List<BlockInfo> blockInfos = new ArrayList<>();
+        BitcoinJSONRPCClient client = connect();
+        Integer latestBlock = client.getBlockCount();
+        for (int i = latestBlock - 9; i < latestBlock + 1; i++) {
+            BitcoindRpcClient.Block block = client.getBlock(i);
+            BlockInfo blockInfo = new BlockInfo();
+            blockInfo.setHeight(i);
+            blockInfo.setSize(block.size());
+            Date time = block.time();
+            blockInfo.setTime(time.getHours() + ":" + (time.getMinutes() < 10 ?
+                    "0" + time.getMinutes() : time.getMinutes())+ ":"
+                    + (time.getSeconds() < 10 ? "0" + time.getSeconds() : time.getSeconds()));
+            blockInfos.add(blockInfo);
+        }
+        Collections.reverse(blockInfos);
+        return blockInfos;
     }
 
     private void empty() {

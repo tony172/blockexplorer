@@ -1,11 +1,11 @@
 package com.blockexplorer.app;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class TransactionInfo {
     private String txId;
     private String blockHash;
+    private Integer blockHeight;
     private Integer confirmations;
     private Long lockTime;
     private Long size;
@@ -29,6 +29,14 @@ public class TransactionInfo {
 
     public void setBlockHash(String blockHash) {
         this.blockHash = blockHash;
+    }
+
+    public Integer getBlockHeight() {
+        return blockHeight;
+    }
+
+    public void setBlockHeight(Integer blockHeight) {
+        this.blockHeight = blockHeight;
     }
 
     public Integer getConfirmations() {
